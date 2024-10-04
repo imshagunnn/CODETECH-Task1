@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Advanced To-Do List</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      transition: background-color 0.3s ease;
+    }
+
+    body.dark {
+      background-color: #333;
+      color: #fff;
+    }
+
+    .container {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      width: 400px;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    body.dark .container {
+      background: #444;
+      color: #fff;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    .task-input {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    #new-task {
+      flex-grow: 1;
+      padding: 5px;
+    }
+
+    #add-task, #clear-tasks, #toggle-theme {
+      padding: 5px 10px;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      background: #eee;
+      padding: 10px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-radius: 4px;
+      transition: transform 0.2s ease;
+    }
+
+    body.dark li {
+      background: #555;
+    }
+
+    li.completed {
+      text-decoration: line-through;
+      color: #888;
+    }
+
+    li:hover {
+      transform: scale(1.02);
+    }
+
+    .task-buttons {
+      display: flex;
+      gap: 5px;
+    }
+
+    .filters {
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .filters button {
+      padding: 5px;
+    }
+
+    #toggle-theme {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Advanced To-Do List</h1>
+    <div class="task-input">
+      <input type="text" id="new-task" placeholder="Enter a new task...">
+      <button id="add-task">Add Task</button>
+    </div>
+    <div class="filters">
+      <button id="filter-all">All</button>
+      <button id="filter-active">Active</button>
+      <button id="filter-completed">Completed</button>
+    </div>
+    <ul id="task-list"></ul>
+    <button id="clear-tasks">Clear All</button>
+    <button id="toggle-theme">Toggle Dark Mode</button>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', loadTasks);
+    document.getElementById('add-task').addEventListener('click', addTask);
+    document.getElementById('clear-tasks').addEventListener('click', clearAllTasks);
+    document.getElementById('toggle-theme').addEventListener('click', toggleTheme);
+
+    // Task filtering
+    document.getElementById('filter-all').addEventListener('click', () => filterTasks('all'));
+    document.getElementById('filter-active').addEventListener('click', () => filterTasks('active'));
+    document.getElementById('filter-completed').addEventListener('click', () => filterTasks('completed'));
+
+    function loadTasks() {
+      const tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+      tasks.forEach(task => createTaskElement(task.text, task.completed));
+      if (localStorage.getItem('darkMode') === 'enabled') {
+        document.body.classList.add('dark');
+      }
+    }
+
+    function addTask() {
+      const taskInput = document.getElementById('new-task');
+      const taskText = taskInput.value.trim();
+
+      if (taskText === '') {
+        alert('Please enter a task!');
+        return;
+      }
+
+      createTaskElement(taskText);
+      saveTask(taskText);
+      taskInput.value = '';
+    }
+
+    function createTaskElement(taskText, completed = false) {
+      const taskList = document.getElementById('task-list');
+      const li = document.createElement('li');
+      if (completed) {
+        li.classList.add('completed');
+      }
+
+      const span = document.createElement('span');
+      span.textContent = taskText;
+
+      const taskButtons = document.createElement('div');
+      taskButtons.classList.add('task-buttons');
+
+      const editButton = document.createElement('button');
+      editButton.textContent = 'Edit';
+      editButton.addEventListener('click', () => editTask(li, span));
+
+      const deleteButton = document.createElement('button');
+      deleteButton.textContent = 'Delete';
+      deleteButton.addEventListener('click', () => {
+        li.remove();
+        removeTask(taskText);
+      });
+
+      taskButtons.appendChild(editButton);
+      taskButtons.appendChild(deleteButton);
+
+      li.appendChild(span);
+      li.appendChild(taskButtons);
+
+      li.addEventListener('click', (e) => {
+        if (e.target.tagName !== 'BUTTON') {
+          li.classList.toggle('completed');
+          updateTaskCompletion(taskText, li.classList.contains('completed'));
+        }
+      });
+
+      taskList.appendChild(li);
+    }
+
+    function saveTask(taskText) {
+      const tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+      tasks.push({ text: taskText, completed: false });
+      localStorage.setItem('tasks', JSON.stringify(tasks));
+    }
+
+    function removeTask(taskText) {
+      let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+      tasks = tasks.filter(task => task.text !== taskText);
+      localStorage.setItem('tasks', JSON.stringify(tasks));
+    }
+
+    function updateTaskCompletion(taskText, completed) {
+      const tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+      const task = tasks.find(task => task.text === taskText);
+      if (task) {
+        task.completed = completed;
+      }
+      localStorage.setItem('tasks', JSON.stringify(tasks));
+    }
+
+    function editTask(li, span) {
+      const newTaskText = prompt('Edit your task:', span.textContent);
+      if (newTaskText !== null && newTaskText.trim() !== '') {
+        const oldTaskText = span.textContent;
+        span.textContent = newTaskText.trim();
+        updateTaskText(oldTaskText, newTaskText.trim());
+      }
+    }
+
+    function updateTaskText(oldText, newText) {
+      const tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+      const task = tasks.find(task => task.text === oldText);
+      if (task) {
+        task.text = newText;
+      }
+      localStorage.setItem('tasks', JSON.stringify(tasks));
+    }
+
+    function clearAllTasks() {
+      document.getElementById('task-list').innerHTML = '';
+      localStorage.removeItem('tasks');
+    }
+
+    function toggleTheme() {
+      document.body.classList.toggle('dark');
+      localStorage.setItem('darkMode', document.body.classList.contains('dark') ? 'enabled' : 'disabled');
+    }
+
+    function filterTasks(filter) {
+      const tasks = document.querySelectorAll('#task-list li');
+      tasks.forEach(task => {
+        switch (filter) {
+          case 'all':
+            task.style.display = 'flex';
+            break;
+          case 'active':
+            task.style.display = task.classList.contains('completed') ? 'none' : 'flex';
+            break;
+          case 'completed':
+            task.style.display = task.classList.contains('completed') ? 'flex' : 'none';
+            break;
+        }
+      });
+    }
+  </script>
+</body>
+
+</html>
